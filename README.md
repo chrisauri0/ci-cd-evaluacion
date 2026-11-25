@@ -91,3 +91,4 @@ flake.nix                   entorno de desarrollo para NixOS
 | GET | `/api/products[/:id]` | autenticado |
 | POST/PUT/DELETE | `/api/products[/:id]` | admin |
 | GET | `/api/health` · `/api/health/error` | público (el segundo devuelve 500 a propósito) |
+
