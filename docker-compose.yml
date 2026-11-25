@@ -1,0 +1,87 @@
+# Stack de producción en AWS EC2: API + PostgreSQL + OpenObserve + OTel Collector + node-exporter
+# Las variables se leen del archivo .env (lo genera el pipeline en cada despliegue).
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: appdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d appdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ${DOCKERHUB_USERNAME}/cicd-observability-api:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DB_HOST: db
+      DB_USER: app
+      DB_PASS: ${DB_PASS}
+      DB_NAME: appdb
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@demo.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin123!}
+      # --- OpenTelemetry: la app habla con el Collector, el Collector con OpenObserve ---
+      OTEL_SERVICE_NAME: api-usuarios-productos
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=production
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/json
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_METRIC_EXPORT_INTERVAL: "10000"
+
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:latest
+    restart: unless-stopped
+    ports:
+      - "5080:5080"
+    environment:
+      ZO_ROOT_USER_EMAIL: ${OO_EMAIL}
+      ZO_ROOT_USER_PASSWORD: ${OO_PASSWORD}
+      ZO_DATA_DIR: /data
+    volumes:
+      - oodata:/data
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    depends_on:
+      - openobserve
+      - node-exporter
+    environment:
+      OO_BASIC_AUTH: ${OO_BASIC_AUTH}
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+      - /:/hostfs:ro,rslave
+    pid: host
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    restart: unless-stopped
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --collector.hwmon
+      - --collector.thermal_zone
+    volumes:
+      - /:/host:ro,rslave
+
+volumes:
+  pgdata:
+  oodata:

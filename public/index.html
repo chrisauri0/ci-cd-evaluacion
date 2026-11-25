@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Panel de Usuarios y Productos</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- LOGIN -->
+    <main id="login-view" class="card narrow">
+      <h1>Iniciar sesión</h1>
+      <form id="login-form">
+        <label>Correo
+          <input id="email" type="email" data-testid="login-email" autocomplete="username" required />
+        </label>
+        <label>Contraseña
+          <input id="password" type="password" data-testid="login-password" autocomplete="current-password" required />
+        </label>
+        <p id="login-error" class="error" data-testid="login-error" hidden></p>
+        <button type="submit" id="btn-login" data-testid="login-submit">Entrar</button>
+      </form>
+    </main>
+
+    <!-- APP -->
+    <div id="app-view" hidden>
+      <header class="topbar">
+        <strong>Panel de administración</strong>
+        <nav>
+          <button id="tab-products" data-testid="tab-products" class="tab active">Productos</button>
+          <button id="tab-users" data-testid="tab-users" class="tab">Usuarios</button>
+        </nav>
+        <span id="user-label" data-testid="user-label"></span>
+        <button id="btn-logout" data-testid="logout">Salir</button>
+      </header>
+
+      <!-- PRODUCTOS -->
+      <section id="products-view" class="card">
+        <h2>Productos</h2>
+        <form id="product-form" class="grid">
+          <input type="hidden" id="p-id" />
+          <input id="p-name" data-testid="product-name" placeholder="Nombre" required />
+          <input id="p-description" data-testid="product-description" placeholder="Descripción" />
+          <input id="p-price" data-testid="product-price" type="number" step="0.01" min="0" placeholder="Precio" required />
+          <input id="p-stock" data-testid="product-stock" type="number" step="1" min="0" placeholder="Stock" required />
+          <button type="submit" data-testid="product-save">Guardar</button>
+          <button type="button" id="p-cancel" data-testid="product-cancel">Limpiar</button>
+        </form>
+        <p id="product-error" class="error" data-testid="product-error" hidden></p>
+        <table data-testid="products-table">
+          <thead><tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
+          <tbody id="products-body"></tbody>
+        </table>
+      </section>
+
+      <!-- USUARIOS -->
+      <section id="users-view" class="card" hidden>
+        <h2>Usuarios</h2>
+        <form id="user-form" class="grid">
+          <input type="hidden" id="u-id" />
+          <input id="u-name" data-testid="user-name" placeholder="Nombre" required />
+          <input id="u-email" data-testid="user-email" type="email" placeholder="Correo" required />
+          <input id="u-password" data-testid="user-password" type="password" placeholder="Contraseña (mín. 8)" />
+          <select id="u-role" data-testid="user-role">
+            <option value="user">user</option>
+            <option value="admin">admin</option>
+          </select>
+          <button type="submit" data-testid="user-save">Guardar</button>
+          <button type="button" id="u-cancel" data-testid="user-cancel">Limpiar</button>
+        </form>
+        <p id="user-error" class="error" data-testid="user-error" hidden></p>
+        <table data-testid="users-table">
+          <thead><tr><th>ID</th><th>Nombre</th><th>Correo</th><th>Rol</th><th></th></tr></thead>
+          <tbody id="users-body"></tbody>
+        </table>
+      </section>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
