@@ -1,9 +1,11 @@
-import { LoggerService } from '@nestjs/common';
-import { logs, SeverityNumber } from '@opentelemetry/api-logs';
+import { LoggerService } from "@nestjs/common";
+import { logs, SeverityNumber } from "@opentelemetry/api-logs";
+import { loggerProvider } from "../tracing";
 
-const otelLogger = logs.getLogger('api-logger');
+// Se usa el proveedor explícito de tracing.ts; si OTel está desactivado, cae al API global (no-op)
+const otelLogger = (loggerProvider ?? logs).getLogger("api-logger");
 
-type Level = 'debug' | 'info' | 'warn' | 'error';
+type Level = "debug" | "info" | "warn" | "error";
 
 const SEVERITY: Record<Level, SeverityNumber> = {
   debug: SeverityNumber.DEBUG,
@@ -18,9 +20,15 @@ const SEVERITY: Record<Level, SeverityNumber> = {
  */
 export class AppLogger implements LoggerService {
   private emit(level: Level, message: any, attrs: Record<string, any> = {}) {
-    const text = typeof message === 'string' ? message : JSON.stringify(message);
-    const record = { timestamp: new Date().toISOString(), level, message: text, ...attrs };
-    (level === 'error' ? console.error : console.log)(JSON.stringify(record));
+    const text =
+      typeof message === "string" ? message : JSON.stringify(message);
+    const record = {
+      timestamp: new Date().toISOString(),
+      level,
+      message: text,
+      ...attrs,
+    };
+    (level === "error" ? console.error : console.log)(JSON.stringify(record));
     otelLogger.emit({
       severityNumber: SEVERITY[level],
       severityText: level.toUpperCase(),
@@ -35,19 +43,22 @@ export class AppLogger implements LoggerService {
   }
 
   log(message: any, context?: string) {
-    this.emit('info', message, context ? { context } : {});
+    this.emit("info", message, context ? { context } : {});
   }
   error(message: any, trace?: string, context?: string) {
-    this.emit('error', message, { ...(trace ? { stack: trace } : {}), ...(context ? { context } : {}) });
+    this.emit("error", message, {
+      ...(trace ? { stack: trace } : {}),
+      ...(context ? { context } : {}),
+    });
   }
   warn(message: any, context?: string) {
-    this.emit('warn', message, context ? { context } : {});
+    this.emit("warn", message, context ? { context } : {});
   }
   debug(message: any, context?: string) {
-    this.emit('debug', message, context ? { context } : {});
+    this.emit("debug", message, context ? { context } : {});
   }
   verbose(message: any, context?: string) {
-    this.emit('debug', message, context ? { context } : {});
+    this.emit("debug", message, context ? { context } : {});
   }
 }
 

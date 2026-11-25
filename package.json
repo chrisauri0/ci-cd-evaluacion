@@ -28,6 +28,7 @@
     "@opentelemetry/instrumentation-http": "latest",
     "@opentelemetry/instrumentation-nestjs-core": "latest",
     "@opentelemetry/instrumentation-pg": "latest",
+    "@opentelemetry/resources": "^3.1.1",
     "@opentelemetry/sdk-logs": "^3.1.1",
     "@opentelemetry/sdk-node": "latest",
     "bcryptjs": "^2.4.3",

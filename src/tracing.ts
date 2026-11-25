@@ -3,22 +3,41 @@
  * DEBE importarse antes que cualquier otro módulo (primera línea de main.ts)
  * para que las librerías (http, express, pg) queden parchadas.
  *
- * Trazas y métricas se configuran por variables de entorno (OTEL_EXPORTER_OTLP_*).
- * Los logs se configuran de forma explícita para asegurar que se exporten.
+ * Trazas y métricas: NodeSDK + variables de entorno OTEL_EXPORTER_OTLP_*.
+ * Logs: proveedor creado y registrado explícitamente aquí.
  */
-
-import { BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
-import { NodeSDK } from "@opentelemetry/sdk-node";
+import { logs } from "@opentelemetry/api-logs";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
-import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
+import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { NestInstrumentation } from "@opentelemetry/instrumentation-nestjs-core";
 import { PgInstrumentation } from "@opentelemetry/instrumentation-pg";
-if (process.env.OTEL_SDK_DISABLED !== "true") {
+import { resourceFromAttributes } from "@opentelemetry/resources";
+import {
+  BatchLogRecordProcessor,
+  LoggerProvider,
+} from "@opentelemetry/sdk-logs";
+import { NodeSDK } from "@opentelemetry/sdk-node";
+
+const enabled = process.env.OTEL_SDK_DISABLED !== "true";
+
+export const loggerProvider: LoggerProvider | undefined = enabled
+  ? new LoggerProvider({
+      resource: resourceFromAttributes({
+        "service.name":
+          process.env.OTEL_SERVICE_NAME ?? "api-usuarios-productos",
+        "deployment.environment": "production",
+      }),
+      processors: [
+        new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() }),
+      ],
+    })
+  : undefined;
+
+if (enabled && loggerProvider) {
+  logs.setGlobalLoggerProvider(loggerProvider);
+
   const sdk = new NodeSDK({
-    logRecordProcessors: [
-      new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() }),
-    ],
     instrumentations: [
       new HttpInstrumentation(),
       new ExpressInstrumentation(),
@@ -30,10 +49,9 @@ if (process.env.OTEL_SDK_DISABLED !== "true") {
   sdk.start();
 
   const shutdown = () =>
-    sdk
-      .shutdown()
-      .catch(() => undefined)
-      .finally(() => process.exit(0));
+    Promise.allSettled([sdk.shutdown(), loggerProvider.shutdown()]).finally(
+      () => process.exit(0),
+    );
   process.on("SIGTERM", shutdown);
   process.on("SIGINT", shutdown);
 }
